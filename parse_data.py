@@ -1,3 +1,4 @@
+import os
 import time
 import traceback
 import multiprocessing
@@ -8,7 +9,8 @@ from scipy.io import loadmat
 import matplotlib.pyplot as plt
 import numpy as np
 
-WIKI_DATASET_PATH = '/home/sebastiao/Desktop/DEV/Datasets/wiki/'
+# Path to the dataset.
+WIKI_DATASET_PATH = '/home/sebastiao/Desktop/PERS/DEV/Datasets/wiki/'
 data = loadmat('{}wiki.mat'.format(WIKI_DATASET_PATH))
 
 
@@ -63,13 +65,21 @@ def parse_chunk(process_name, start, end, mtcnn):
                 else:
                     face = wiki_extract_face(pixels, data['wiki'][0]['face_location'][0][0][i][0])
 
-                valid_face_imgs_filepaths.append(img)
-                faces.append(face)
-                ages.append(int(data['wiki'][0]['photo_taken'][0][0][i]) - int(img.split('_')[1].split('-')[0]))
+                age = int(data['wiki'][0]['photo_taken'][0][0][i]) - int(img.split('_')[1].split('-')[0])
 
+                valid_face_imgs_filepaths.append((img,
+                                                  data['wiki'][0]['face_location'][0][0][i][0],
+                                                  data['wiki'][0]['photo_taken'][0][0][i],
+                                                  img.split('_')[1].split('-')[0],
+                                                  age))
+                faces.append(face)
+                ages.append(age)
+            else:
+                print('[X] Deleting {}'.format(filepath))
+                os.remove(filepath) 
 
         except Exception as e:
-            # traceback.print_exc()
+            
             pass
 
     to_pickle(valid_face_imgs_filepaths, 
@@ -87,14 +97,11 @@ def parse_chunk(process_name, start, end, mtcnn):
 data_size = len(data['wiki'][0]['full_path'][0][0])
 n_chunks = 10
 start = int(round(time.time() * 1000))
-
 for i in range(0, n_chunks - 1):
     parse_chunk('p{}'.format(i), int(i * data_size / n_chunks), int((i + 1) * data_size / n_chunks), False)
 
 parse_chunk('p9', int((n_chunks - 1) * data_size / n_chunks), data_size, False)
-
 end = int(round(time.time() * 1000))
 
 print('Time elapsed: {} ms'.format(end - start))
-
 
